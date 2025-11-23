@@ -51,15 +51,32 @@ The project includes **9 advanced visualization modules**, multiple interactive 
 
 This dashboard implements **9 distinct & advanced visualizations**:
 
-1. **Density Map** — Geographic clustering of incidents
-2. **Treemap** — Region → Country impact visualization
-3. **Attack Composition Over Time** (Area chart)
-4. **Scatter Matrix (SPLOM)** — Multivariate analysis
-5. **Calendar Heatmap** — Year–Month intensity
-6. **Violin Plot** — Monthly impact distributions
-7. **Parallel Coordinates** — Multidimensional incident profiles
-8. **Sunburst Chart** — Region → Attack Type → Target hierarchy
-9. **Bubble Matrix** — Attack Type × Target Type interaction
+1. **Treemap — Region → Country Impact Visualization**  
+   - Shows which regions and countries contribute most to the total impact.
+
+2. **Parallel Coordinates Plot (PCP) — Multidimensional Incident Profiles**  
+   - Displays year, month, region, attack type, target type, weapon type, and selected metrics together.
+
+3. **Bubble Matrix — Attack Type × Target Type Interaction**  
+   - Highlights which attack–target combinations generate the highest impact.
+
+4. **Attack Composition Over Time (Area Chart)**  
+   - Visualizes how the distribution of attack types evolves across years.
+
+5. **Scatter Matrix (SPLOM) — Multivariate Analysis**  
+   - Explores correlations and relationships between selected numeric variables.
+
+6. **Calendar Heatmap — Year–Month Intensity**  
+   - Shows which year–month combinations have the highest concentration of incidents.
+
+7. **Density Map — Geographic Clustering of Incidents**  
+   - Displays spatial concentration using a global density (heat) map.
+
+8. **Violin Plot — Distribution of Impact by Attack Type**  
+   - Shows the distribution (spread, median, density) of metric values for each attack type.
+
+9. **Sunburst Chart — Region → Attack Type → Target Hierarchy**  
+   - Visualizes hierarchical relationships between region, attack type, and target type.
 
 Each module includes:
 
@@ -116,12 +133,9 @@ The dashboard will open automatically in your browser.
 
 ## 👥 9. Contributions
 
-Add the names and roles of team members here.
-Example:
-
-* **Member A:** Data preprocessing, heatmap, SPLOM
-* **Member B:** Density map, treemap, sunburst
-* **Member C:** Dashboard layout, chatbot, report
+* Sümeyye Buran: Preprocessing, Select Numeric Dimensions feature, Treemap, Parallel Coordinates, Bubble Matrix.
+* Ayşe Gençalioğlu: Dataset research/selection, filters, multilingual support, Heatmap, Attack Composition, Scatter Plot.
+* Fatma Nur Gençdoğan: Rule-based chatbot, Density Map, Violin Plot, Sunburst Chart.
 
 ---
 
