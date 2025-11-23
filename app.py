@@ -3,98 +3,29 @@ import pandas as pd
 import plotly.express as px
 from scipy import stats
 
-# -----------------------------
-# PAGE SETTINGS
-# -----------------------------
-st.set_page_config(page_title="GTD Dashboard – Core Filters + Charts 4-5-6", layout="wide")
+st.set_page_config(page_title="Mini Dashboard", layout="wide")
+
+st.title(" Mini Global Terrorism Dashboard ")
 
 # -----------------------------
-# LANGUAGE STRINGS
-# -----------------------------
-TEXT = {
-    "tr": {
-        "lang_label": "Dil / Language",
-        "filters": "Filtreler",
-        "year_range": "Yıl aralığı",
-        "countries": "Ülkeler",
-        "regions": "Bölgeler",
-        "attack_types": "Saldırı türleri",
-        "select_dims": "Sayısal metrik seç",
-        "select_at_least_one": "En az bir metrik seçin.",
-
-        "title": "🌍 Küresel Terörizm Dashboard",
-
-        "c4": "📈 4) Zaman İçinde Saldırı Türü Kompozisyonu",
-        "q4": "Soru: Zaman içinde saldırı türleri nasıl değişiyor?",
-
-        "c5": "🧬 5) Çok Değişkenli Scatter Matrix (SPLOM)",
-        "q5": "Soru: Seçilen sayısal değişkenler arasında ilişki var mı?",
-
-        "c6": "📅 6) Yıl–Ay Heatmap",
-        "q6": "Soru: Yıl–ay bazında en yoğun dönemler hangileri?",
-
-        "ready": "Dashboard Hazır ✓",
-    },
-
-    "en": {
-        "lang_label": "Language",
-        "filters": "Filters",
-        "year_range": "Year range",
-        "countries": "Countries",
-        "regions": "Regions",
-        "attack_types": "Attack types",
-        "select_dims": "Select numeric metrics",
-        "select_at_least_one": "Select at least one metric.",
-
-        "title": "🌍 Global Terrorism Dashboard",
-
-        "c4": "📈 4) Attack Type Composition Over Time",
-        "q4": "Question: How do attack types evolve over time?",
-
-        "c5": "🧬 5) Multivariate Scatter Matrix (SPLOM)",
-        "q5": "Question: How are selected numerical variables related?",
-
-        "c6": "📅 6) Year–Month Heatmap",
-        "q6": "Question: Which year–month periods show peak intensity?",
-
-        "ready": "Dashboard Ready ✓",
-    }
-}
-
-# -----------------------------
-# SIDEBAR — LANGUAGE SELECTION
-# -----------------------------
-st.sidebar.title(" ")
-
-lang = st.sidebar.selectbox(
-    TEXT["en"]["lang_label"],
-    ["tr", "en"],
-    format_func=lambda x: "🇹🇷 Türkçe" if x == "tr" else "🇬🇧 English",
-    key="lang_select"
-)
-T = TEXT[lang]
-
-# -----------------------------
-# LOAD & PREPROCESS DATA
+# LOAD DATA
 # -----------------------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("gtd_insight_ready.csv")
     df = df.copy()
 
+    # Numeric columns
     num_cols = ["nkill", "nwound", "latitude", "longitude", "imonth"]
     for c in num_cols:
         df[c] = pd.to_numeric(df[c], errors="coerce")
 
     df = df[df["imonth"].between(1, 12)]
 
-    for c in ["nkill", "nwound", "latitude", "longitude"]:
-        df[c] = df[c].fillna(df[c].median())
-
-    z_cols = ["nkill", "nwound", "latitude", "longitude"]
-    z_scores = stats.zscore(df[z_cols], nan_policy="omit")
-    z_df = pd.DataFrame(z_scores, columns=z_cols)
-    df = df[(z_df.abs() < 4).all(axis=1)]
+    df["nkill"] = df["nkill"].fillna(df["nkill"].median())
+    df["nwound"] = df["nwound"].fillna(df["nwound"].median())
+    df["latitude"] = df["latitude"].fillna(df["latitude"].median())
+    df["longitude"] = df["longitude"].fillna(df["longitude"].median())
 
     df["casualties"] = df["nkill"] + df["nwound"]
     df["month_name"] = pd.to_datetime(df["imonth"], format="%m").dt.strftime("%b")
@@ -103,123 +34,123 @@ def load_data():
 
 df = load_data()
 
-NUM_COLS = ["nkill", "nwound", "casualties"]
-DEFAULT_DIMS = ["nkill", "nwound", "casualties"]
+# =========================================================
+# 7) DENSITY MAP
+# =========================================================
+st.header("7) Geographic Density Map")
 
-# -----------------------------
-# SIDEBAR FILTERS
-# -----------------------------
-st.sidebar.title(T["filters"])
+tmp = df.copy()
+tmp["metric_value"] = tmp["casualties"]
 
-year_min, year_max = int(df["iyear"].min()), int(df["iyear"].max())
-year_range = st.sidebar.slider(
-    T["year_range"], year_min, year_max, (year_min, year_max), key="year_range"
+map_sample = tmp.sample(min(len(tmp), 15000), random_state=7)
+
+fig7 = px.density_mapbox(
+    map_sample,
+    lat="latitude",
+    lon="longitude",
+    z="metric_value",
+    radius=10,
+    zoom=1.1,
+    mapbox_style="open-street-map",
+    height=450
 )
-
-top_countries = df["country_txt"].value_counts().head(20).index.tolist()
-countries = st.sidebar.multiselect(
-    T["countries"], top_countries, default=top_countries, key="countries_filter"
-)
-
-regions = df[df["country_txt"].isin(top_countries)]["region_txt"].unique().tolist()
-region_sel = st.sidebar.multiselect(
-    T["regions"], regions, default=regions, key="regions_filter"
-)
-
-attack_types = sorted(df["attacktype1_txt"].unique())
-attack_sel = st.sidebar.multiselect(
-    T["attack_types"], attack_types, default=attack_types, key="attack_filter"
-)
-
-# -----------------------------
-# APPLY FILTERS
-# -----------------------------
-df_f = df[
-    (df["iyear"].between(year_range[0], year_range[1])) &
-    (df["country_txt"].isin(countries)) &
-    (df["region_txt"].isin(region_sel)) &
-    (df["attacktype1_txt"].isin(attack_sel))
-].copy()
-
-# -----------------------------
-# PAGE TITLE
-# -----------------------------
-st.title(T["title"])
-
-def metric_val(df, dims):
-    return df[dims].sum(axis=1)
-
+st.plotly_chart(fig7, use_container_width=True)
 
 # =========================================================
-# 4) ATTACK COMPOSITION OVER TIME
+# 8) VIOLIN PLOT
 # =========================================================
-st.subheader(T["c4"])
-st.markdown(f"**{T['q4']}**")
+st.header("8) Violin Plot (Attack Type vs Casualties)")
 
-dims_atk = DEFAULT_DIMS  # sabit dims
+tmp = df.copy()
+tmp["metric_value"] = tmp["casualties"]
 
-tmp = df_f.copy()
-tmp["metric_value"] = metric_val(tmp, dims_atk)
+top_atks = (
+    tmp.groupby("attacktype1_txt")["metric_value"].sum()
+    .sort_values(ascending=False).head(8).index
+)
+vdf = tmp[tmp["attacktype1_txt"].isin(top_atks)]
 
-atk_year = tmp.groupby(["iyear", "attacktype1_txt"])["metric_value"].sum().reset_index()
-
-fig4 = px.area(
-    atk_year,
-    x="iyear",
+fig8 = px.violin(
+    vdf,
+    x="attacktype1_txt",
     y="metric_value",
-    color="attacktype1_txt",
+    box=True,
+    points="outliers",
     height=450
 )
-
-st.plotly_chart(fig4, use_container_width=True)
-
-# =========================================================
-# 5) SPLOM
-# =========================================================
-st.subheader(T["c5"])
-st.markdown(f"**{T['q5']}**")
-
-splom_cols = DEFAULT_DIMS
-
-splom_sample = df_f[splom_cols + ["attacktype1_txt"]].dropna()
-splom_sample = splom_sample.sample(min(len(splom_sample), 4000), random_state=11)
-
-fig5 = px.scatter_matrix(
-    splom_sample,
-    dimensions=splom_cols,
-    color="attacktype1_txt",
-    height=550
-)
-
-fig5.update_layout(dragmode="select")
-st.plotly_chart(fig5, use_container_width=True)
+st.plotly_chart(fig8, use_container_width=True)
 
 # =========================================================
-# 6) YEAR–MONTH HEATMAP
+# 9) SUNBURST
 # =========================================================
-st.subheader(T["c6"])
-st.markdown(f"**{T['q6']}**")
+st.header("9) Sunburst Diagram (Region → Attack → Target)")
 
-tmp = df_f.copy()
-tmp["metric_value"] = metric_val(tmp, DEFAULT_DIMS)
+tmp = df.copy()
+tmp["metric_value"] = tmp["casualties"]
 
-month_order = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+sb = tmp.groupby(
+    ["region_txt", "attacktype1_txt", "targtype1_txt"]
+)["metric_value"].sum().reset_index()
 
-ym = tmp.groupby(["iyear", "month_name"])["metric_value"].sum().reset_index()
-ym["month_name"] = pd.Categorical(ym["month_name"], categories=month_order, ordered=True)
-
-pivot_ym = ym.pivot_table(index="month_name", columns="iyear", values="metric_value", fill_value=0)
-
-fig6 = px.imshow(
-    pivot_ym,
-    aspect="auto",
-    color_continuous_scale="Inferno",
+fig9 = px.sunburst(
+    sb,
+    path=["region_txt", "attacktype1_txt", "targtype1_txt"],
+    values="metric_value",
     height=450
 )
+st.plotly_chart(fig9, use_container_width=True)
 
-st.plotly_chart(fig6, use_container_width=True)
+# -------------------------------------------------
+# CHATBOT — ANALYTIC ASSISTANT
+# -------------------------------------------------
+st.markdown("---")
+st.header("Mini Analytical Chatbot")
 
-# -----------------------------
-# FOOTER
-# -----------------------------
-st.success(T["ready"])
+def answer_question(question):
+    q = question.lower().strip()
+    import re
+
+    # year question
+    year_match = re.findall(r"19\\d{2}|20\\d{2}", q)
+    if year_match:
+        year = int(year_match[0])
+        count = len(df[df["iyear"] == year])
+        return f"In {year}, there were {count} incidents."
+
+    # most attacks country
+    if "country" in q and "most" in q:
+        top_country = df["country_txt"].value_counts().idxmax()
+        cnt = df["country_txt"].value_counts().max()
+        return f"The country with the highest number of attacks is {top_country} ({cnt} incidents)."
+
+    # deadliest year
+    if "deadliest" in q or "fatalities" in q:
+        dyear = df.groupby("iyear")["nkill"].sum().idxmax()
+        kills = df.groupby("iyear")["nkill"].sum().max()
+        return f"The deadliest year was {dyear} with {int(kills)} deaths."
+
+    if "total attacks" in q:
+        return f"The dataset contains {len(df):,} incidents."
+
+    if "how many died" in q or "fatalities" in q:
+        total_dead = int(df["nkill"].sum())
+        total_wounded = int(df["nwound"].sum())
+        return f"Total: {total_dead} dead, {total_wounded} wounded."
+
+    if "attack types" in q:
+        t = df["attacktype1_txt"].nunique()
+        return f"There are {t} attack types."
+
+    if "hello" in q:
+        return "Hello! Ask me anything about the dataset."
+
+    return (
+        "I didn't understand. Try asking:\n"
+        "- How many attacks occurred in 2015?\n"
+        "- Which country has the most incidents?\n"
+        "- What is the total number of fatalities?"
+    )
+
+user_q = st.text_input("Ask a question:")
+if user_q:
+    st.info(answer_question(user_q))
